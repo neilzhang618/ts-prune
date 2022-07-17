@@ -331,18 +331,10 @@ export const analyze = (project: Project, onResult: OnResultType, entrypoints: s
               const finalTarget = fileMap[exportObj.exportedFilePath]
               const finalExportObj = finalTarget.exported.find(v => v.name === token)
               if (finalExportObj) {
-                if (finalExportObj.exportedFilePath === '/home/neilz/Programs/Web/github/ts-prune/test-files/source/quux.ts') {
-                  // eslint-disable-next-line no-debugger
-                  debugger
-                }
                 finalExportObj.count++
               }
             }
             else {
-              if (exportObj.exportedFilePath === '/home/neilz/Programs/Web/github/ts-prune/test-files/source/quux.ts') {
-                // eslint-disable-next-line no-debugger
-                debugger
-              }
               exportObj.count++
             }
           }
