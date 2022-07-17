@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "es5",
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "outDir": "lib",
+        "sourceMap": true,
+        "declaration": true,
+        "lib": [
+            "esnext"
+        ],
+        "esModuleInterop": true
+    },
+    // "files": [
+    //     "test-files/index.ts"
+    // ],
+    "include": [
+        "test-files/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}

@@ -15,6 +15,7 @@
     "build": "tsc",
     "prepublish": "rm -rf lib && yarn build",
     "pretest": "npm run lint",
+    "t": "ts-node src/index.ts -p tsconfig.test-files.json",
     "test": "jest --coverage",
     "test:integration": "sh integration/test.sh",
     "lint": "eslint . --cache --fix --ext .ts,.tsx",
