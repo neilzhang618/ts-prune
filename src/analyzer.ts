@@ -18,6 +18,8 @@ import countBy from "lodash/fp/countBy";
 import last from "lodash/fp/last";
 import { realpathSync } from "fs";
 import { IConfigInterface } from "./configurator";
+import { Node } from "ts-morph";
+import path from "path"
 
 type OnResultType = (result: IAnalysedResult) => void;
 
@@ -253,7 +255,7 @@ const filterSkippedFiles = (sourceFiles: SourceFile[], skipper: RegExp | undefin
   return sourceFiles.filter(file => !skipper.test(file.getSourceFile().compilerNode.fileName));
 }
 
-export const analyze = (project: Project, onResult: OnResultType, entrypoints: string[], skipPattern?: string) => {
+export const analyzeBackup = (project: Project, onResult: OnResultType, entrypoints: string[], skipPattern?: string) => {
   const skipper = skipPattern ? new RegExp(skipPattern) : undefined;
 
   filterSkippedFiles(project.getSourceFiles(), skipper)
@@ -268,4 +270,95 @@ export const analyze = (project: Project, onResult: OnResultType, entrypoints: s
   });
 
   emitTsConfigEntrypoints(entrypoints, onResult);
+};
+
+const getUnused = ((file: SourceFile) => {
+  const filePath = file.getFilePath()
+  const imported = file.getImportDeclarations().map(decl => {
+    return {
+      importFilePath: getModuleSourceFile(decl),
+      tokens: handleImportDeclaration(decl)
+    }
+  })
+  // dynamic import
+  file.getImportStringLiterals().forEach(str => {
+    const strParent = str.getParent()
+    const symbol = str.getSymbol()
+
+    if (strParent.getText().startsWith('import(')) {
+      const declarations = symbol.getDeclarations()
+      imported.push({
+        importFilePath: (declarations[0] as SourceFile).getFilePath(),
+        tokens: ['default']
+      })
+    }
+  })
+  const exported = file.getExportSymbols().map(symbol => {
+    return {
+      // filePath: (symbol.getDeclarations()[0] as SourceFile).getFilePath(),
+      exportedFilePath: (symbol.compilerSymbol as any).parent.getDeclarations()[0].path,
+      name: symbol.compilerSymbol.name,
+      line: lineNumber(symbol),
+      count: 0
+    }
+  })
+  
+  return {
+    filePath,
+    imported,
+    exported
+  }
+})
+
+export const analyze = (project: Project, onResult: OnResultType, entrypoints: string[], skipPattern?: string) => {
+  skipPattern = "\\.test\\.tsx?"
+  const skipper = skipPattern ? new RegExp(skipPattern) : undefined;
+
+  const files = filterSkippedFiles(project.getSourceFiles(), skipper)
+  const list = files.map(getUnused)
+  const fileMap: {[filePath: string] : typeof list[number]} = {}
+  list.forEach(obj => {
+    fileMap[obj.filePath] = obj
+  })
+  list.forEach(obj => {
+    obj.imported.forEach(importObj => {
+      const target = fileMap[importObj.importFilePath]
+      if (target) {
+        importObj.tokens.forEach(token => {
+          const exportObj = target.exported.find(v => v.name === token)
+          if (exportObj) {
+            if (exportObj.exportedFilePath !== target.filePath) {
+              const finalTarget = fileMap[exportObj.exportedFilePath]
+              const finalExportObj = finalTarget.exported.find(v => v.name === token)
+              if (finalExportObj) {
+                if (finalExportObj.exportedFilePath === '/home/neilz/Programs/Web/github/ts-prune/test-files/source/quux.ts') {
+                  // eslint-disable-next-line no-debugger
+                  debugger
+                }
+                finalExportObj.count++
+              }
+            }
+            else {
+              if (exportObj.exportedFilePath === '/home/neilz/Programs/Web/github/ts-prune/test-files/source/quux.ts') {
+                // eslint-disable-next-line no-debugger
+                debugger
+              }
+              exportObj.count++
+            }
+          }
+        })
+      }
+    })
+  })
+  list.forEach(obj => {
+    obj.exported.forEach(exportObj => {
+      if (exportObj.exportedFilePath !== obj.filePath) {
+        return
+      }
+      if (exportObj.count === 0) {
+        console.log(`${exportObj.exportedFilePath}:${exportObj.line} ${exportObj.name}`)
+      }
+    })
+  })
+  // console.log(JSON.stringify(fileMap, undefined, 2))
 };
